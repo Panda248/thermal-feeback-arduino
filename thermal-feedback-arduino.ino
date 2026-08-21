@@ -56,8 +56,8 @@ float calculate_resistance(float r1, float vOut) {
   return (r1 * vOut) / (VOLTS_IN - vOut);
 }
 
-float get_temperature() {
-  int sensorVal = analogRead(SENSOR_PIN);
+float get_temperature(int pin) {
+  int sensorVal = analogRead(pin);
   float v = ADC_TO_VOLTS(sensorVal);
   float r = calculate_resistance(R1, v);
   float t = calculate_temperature(r);
@@ -76,8 +76,8 @@ void set_motor_pwm(int pwm, int IN1_PIN, int IN2_PIN)
   }
 }
 
-void pid_temp(float target, int motor_a, int motor_b) {
-  float cur_temp = get_temperature();
+void pid_temp(float target, int motor_a, int motor_b, int thermistor) {
+  float cur_temp = get_temperature(thermistor);
   float dt = delta_millis / 1000.0f;
   if(dt <= 0.000001f) {
     dt = 0.000001f;
