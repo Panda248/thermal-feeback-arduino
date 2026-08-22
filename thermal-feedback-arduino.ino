@@ -9,7 +9,7 @@
 // PID values
 #define kp 255.0f
 #define ki 0.0f
-#define kd 10.0f
+#define kd 20.0f
 // #define dt 0.05f
 float prev_error = 0;
 float integral = 0;
@@ -101,6 +101,9 @@ void pid_temp(float target, int motor_a, int motor_b, int thermistor) {
   prev_error = error;
 
   int out = round(min(255.0f, max(-255.0f, output)));
+  // Serial.print("Output power: ");
+  Serial.print(out);
+  Serial.print(",");
 
   set_motor_pwm(out, motor_a, motor_b);
   
@@ -127,9 +130,8 @@ void pid_temp(float target, int motor_a, int motor_b, int thermistor) {
 // }
 
 void read_temps_bytes(float * out) {
-  if(Serial.available() == 0) {
-    return;
-  }
+  if(Serial.available() < 13) return;
+  if (Serial.read() != 'S') return;
 
   byte temp_bytes[12] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
   short short_buffer = 0;
@@ -140,9 +142,12 @@ void read_temps_bytes(float * out) {
   }
   for(int i = 0; i < 6; i++) {
     short_buffer = (temp_bytes[i * 2]) | (temp_bytes[(i * 2) + 1] << 8);
-    temps[i] = (short_buffer > 1500 && short_buffer < 4000) ? short_buffer / 100.0f: 27.0f;
+    out[i] = short_buffer / 100.0f;
+    // out[i] = (short_buffer > 1500 && short_buffer < 4000) ? short_buffer / 100.0f: 27.0f;
     // out[i] = (short_buffer > -25600 && short_buffer < 25600) ? short_buffer / 100.0f : 0;
   }
+  // DEBUGGING - For checking received bytes from unity
+  // Will print out palm, thumb, index, middle, ring, and little (pinky) finger intended temperatures
   // char buffer [64];
   // snprintf(buffer, 64, "P%.2f,T%.2f,I%.2f,M%.2f,R%.2f,L%.2f", out[0], out[1], out[2], out[3], out[4], out[5]);
   // Serial.println(buffer);
@@ -162,6 +167,15 @@ void setup() {
   integral = 0;
 }
 
+/**
+  * The current implementation only uses one thermistor peltier module
+  * The serial already records target temperatures for all 6 hypothetical modules
+  * To add a module, use the pid_temp function
+  * pid_temp(temps[i], motor_out_pin1, motor_out_pin2, thermistor_pin)
+  * i is the index of the finger temp
+  * 0 : palm, 1 : thumb, 2 : index, 3 : middle, 4 : ring, 5 : little (pinky)
+*/
+
 void loop() {
   delta_millis = millis() - cur_time;
   cur_time += delta_millis;
@@ -173,19 +187,18 @@ void loop() {
   // String in = Serial.readStringUntil('\n');
   // float in_val = in.toFloat();
   
+
   // tbh_temp(38, MOT_IN1, MOT_IN2);
-  // pid_temp(0, MOT_IN1, MOT_IN2);
-  pid_temp(temps[0], MOT_IN1, MOT_IN2);
+  // pid_temp(38, MOT_IN1, MOT_IN2, SENSOR_PIN);
+  pid_temp(temps[0], MOT_IN1, MOT_IN2, SENSOR_PIN);
   // int output = round(deltas[0] * 100); 
   // set_motor_pwm(output, MOT_IN1, MOT_IN2);
-  // Serial.println(temps[0]);
-  // if(delta_delay > 20) {
-  //   delta_delay -= 20;
-  // }
+  
   // Serial.print("Output power: ");
   // Serial.println(output);
   // Serial.print("Temperature: ");
-  Serial.println(get_temperature());
+  Serial.print(temps[0]);
+  Serial.print(",");
+  Serial.println(get_temperature(SENSOR_PIN));
   delay(20);
-
 }
